@@ -15,6 +15,28 @@ export interface OmpSourceRecord {
   raw: JsonObject;
 }
 
+export type OmpTimelineEventKind =
+  | "session_started"
+  | "session_completed"
+  | "user_message"
+  | "assistant_message"
+  | "instruction"
+  | "tool_call"
+  | "tool_result"
+  | "model_change";
+
+export interface OmpTimelineEvent {
+  id: string;
+  lineNumber: number;
+  kind: OmpTimelineEventKind;
+  actor: "User" | "Model" | "Tool" | "OMP";
+  label: string;
+  timestamp?: string;
+  text?: string;
+  details?: JsonValue;
+  isError?: boolean;
+}
+
 export interface OmpReplaySummary {
   sessionId: string;
   formatVersion?: number;
@@ -36,6 +58,7 @@ export interface OmpReplay {
   format: "omp-jsonl";
   source: "omp";
   records: OmpSourceRecord[];
+  timeline: OmpTimelineEvent[];
   summary: OmpReplaySummary;
 }
 
@@ -93,6 +116,213 @@ function getMessage(record: OmpSourceRecord): UnknownRecord | undefined {
   const message = record.raw.message;
 
   return isRecord(message) ? message : undefined;
+}
+
+function readContentText(content: unknown): string | undefined {
+  if (typeof content === "string") {
+    return content.trim() || undefined;
+  }
+
+  if (!Array.isArray(content)) {
+    return undefined;
+  }
+
+  const parts: string[] = [];
+
+  for (const block of content) {
+    if (typeof block === "string") {
+      if (block.trim()) {
+        parts.push(block.trim());
+      }
+      continue;
+    }
+
+    if (!isRecord(block)) {
+      continue;
+    }
+
+    if (block.type === "text" && typeof block.text === "string") {
+      if (block.text.trim()) {
+        parts.push(block.text.trim());
+      }
+    } else if (block.type === "image") {
+      parts.push("[Image]");
+    }
+  }
+
+  return parts.length > 0 ? parts.join("\n\n") : undefined;
+}
+
+function readToolName(record: UnknownRecord): string | undefined {
+  return (
+    readString(record, "toolName") ??
+    readString(record, "name") ??
+    readString(record, "tool")
+  );
+}
+
+function toJsonValue(value: unknown): JsonValue | undefined {
+  return value === undefined ? undefined : (value as JsonValue);
+}
+
+function buildTimeline(records: OmpSourceRecord[]): OmpTimelineEvent[] {
+  const events: OmpTimelineEvent[] = [];
+
+  function addEvent(
+    record: OmpSourceRecord,
+    event: Omit<OmpTimelineEvent, "id" | "lineNumber" | "timestamp">,
+  ) {
+    events.push({
+      ...event,
+      id: `line-${record.lineNumber}-event-${events.length + 1}`,
+      lineNumber: record.lineNumber,
+      timestamp: record.timestamp,
+    });
+  }
+
+  for (const record of records) {
+    if (record.type === "session") {
+      addEvent(record, {
+        kind: "session_started",
+        actor: "OMP",
+        label: "Session started",
+        text: readString(record.raw, "cwd"),
+      });
+      continue;
+    }
+
+    if (record.type === "model_change") {
+      const model = readString(record.raw, "model");
+      const provider = readString(record.raw, "provider");
+
+      addEvent(record, {
+        kind: "model_change",
+        actor: "OMP",
+        label: "Model changed",
+        text:
+          model && provider && !model.startsWith(`${provider}/`)
+            ? `${provider}/${model}`
+            : model ?? provider,
+      });
+      continue;
+    }
+
+    if (
+      record.type === "custom" &&
+      record.raw.customType === "session_exit"
+    ) {
+      addEvent(record, {
+        kind: "session_completed",
+        actor: "OMP",
+        label: "Session completed",
+      });
+      continue;
+    }
+
+    if (record.type !== "message") {
+      continue;
+    }
+
+    const message = getMessage(record);
+
+    if (!message) {
+      continue;
+    }
+
+    const role = readString(message, "role");
+    const content = message.content;
+
+    if (role === "user") {
+      addEvent(record, {
+        kind: "user_message",
+        actor: "User",
+        label: "User prompt",
+        text: readContentText(content) ?? "Non-text message",
+      });
+      continue;
+    }
+
+    if (role === "developer" || role === "system") {
+      addEvent(record, {
+        kind: "instruction",
+        actor: "OMP",
+        label: role === "developer" ? "Developer instruction" : "System instruction",
+        text: readContentText(content) ?? "Non-text instruction",
+      });
+      continue;
+    }
+
+    if (role === "assistant") {
+      if (typeof content === "string") {
+        const text = readContentText(content);
+
+        if (text) {
+          addEvent(record, {
+            kind: "assistant_message",
+            actor: "Model",
+            label: "Model response",
+            text,
+          });
+        }
+        continue;
+      }
+
+      if (!Array.isArray(content)) {
+        continue;
+      }
+
+      for (const block of content) {
+        if (!isRecord(block)) {
+          continue;
+        }
+
+        if (block.type === "text" && typeof block.text === "string") {
+          const text = block.text.trim();
+
+          if (text) {
+            addEvent(record, {
+              kind: "assistant_message",
+              actor: "Model",
+              label: "Model response",
+              text,
+            });
+          }
+          continue;
+        }
+
+        if (block.type === "toolCall") {
+          const toolName = readToolName(block) ?? "Unknown tool";
+          const details =
+            toJsonValue(block.arguments) ??
+            toJsonValue(block.input) ??
+            toJsonValue(block);
+
+          addEvent(record, {
+            kind: "tool_call",
+            actor: "Model",
+            label: `${toolName} called`,
+            details,
+          });
+        }
+      }
+      continue;
+    }
+
+    if (role === "toolResult") {
+      const toolName = readToolName(message) ?? "Tool";
+
+      addEvent(record, {
+        kind: "tool_result",
+        actor: "Tool",
+        label: `${toolName} result`,
+        text: readContentText(content),
+        details: toJsonValue(content),
+        isError: message.isError === true,
+      });
+    }
+  }
+
+  return events;
 }
 
 function getModel(records: OmpSourceRecord[]): string | undefined {
@@ -293,6 +523,7 @@ export function parseOmpJsonl(text: string): OmpImportResult {
       format: "omp-jsonl",
       source: "omp",
       records,
+      timeline: buildTimeline(records),
       summary: buildSummary(records),
     },
   };

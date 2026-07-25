@@ -7,6 +7,7 @@ import {
   type OmpImportIssue,
   type OmpReplay,
 } from "@/lib/replay/omp";
+import { ReplayTimeline } from "@/components/replay-timeline";
 
 const MAX_REPLAY_FILE_SIZE = 5 * 1024 * 1024;
 
@@ -237,9 +238,7 @@ export function ReplayImporter() {
             </section>
           </div>
 
-          <div className="border-t border-neutral-200 px-4 py-3 text-xs text-neutral-500">
-            Session recognized. A detailed event timeline is the next milestone.
-          </div>
+          <ReplayTimeline events={importState.replay.timeline} />
         </section>
       ) : (
         <section className="mt-4 overflow-hidden border border-neutral-200 bg-white">
