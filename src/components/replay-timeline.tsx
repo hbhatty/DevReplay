@@ -90,15 +90,21 @@ function EventText({
   );
 }
 
-function TimelineRow({ event }: { event: OmpTimelineEvent }) {
+function TimelineRow({
+  event,
+  highlighted,
+}: {
+  event: OmpTimelineEvent;
+  highlighted: boolean;
+}) {
   const status = getStatus(event);
   const isConversation =
     event.kind === "user_message" || event.kind === "assistant_message";
   const rowClassName =
-    event.kind === "user_message"
-      ? "bg-neutral-50"
-      : event.kind === "assistant_message"
-        ? "bg-white"
+    highlighted
+      ? "bg-amber-50"
+      : event.kind === "user_message"
+        ? "bg-neutral-50"
         : "bg-white";
   const messageClassName = isConversation
     ? event.kind === "user_message"
@@ -110,9 +116,10 @@ function TimelineRow({ event }: { event: OmpTimelineEvent }) {
 
   return (
     <li
+      id={`timeline-event-${event.id}`}
       className={`grid grid-cols-[5rem_1fr] gap-x-3 px-4 ${
         isConversation ? "py-4" : "py-3"
-      } sm:grid-cols-[7rem_1fr_7rem_6rem] ${rowClassName}`}
+      } scroll-mt-4 sm:grid-cols-[7rem_1fr_7rem_6rem] ${rowClassName}`}
     >
       <time
         dateTime={event.timestamp}
@@ -164,9 +171,15 @@ function TimelineRow({ event }: { event: OmpTimelineEvent }) {
   );
 }
 
-export function ReplayTimeline({ events }: { events: OmpTimelineEvent[] }) {
+export function ReplayTimeline({
+  events,
+  highlightedEventId,
+}: {
+  events: OmpTimelineEvent[];
+  highlightedEventId?: string;
+}) {
   return (
-    <section aria-labelledby="timeline-heading" className="border-t border-neutral-200">
+    <section aria-labelledby="timeline-heading">
       <div className="flex items-center justify-between gap-4 border-b border-neutral-200 px-4 py-3">
         <h2 id="timeline-heading" className="text-sm font-medium text-neutral-900">
           Timeline
@@ -184,7 +197,11 @@ export function ReplayTimeline({ events }: { events: OmpTimelineEvent[] }) {
       {events.length > 0 ? (
         <ol className="divide-y divide-neutral-200">
           {events.map((event) => (
-            <TimelineRow key={event.id} event={event} />
+            <TimelineRow
+              key={event.id}
+              event={event}
+              highlighted={event.id === highlightedEventId}
+            />
           ))}
         </ol>
       ) : (
