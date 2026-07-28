@@ -33,13 +33,14 @@ analysis profiles through local Codex or a configured API provider.
 - Deterministic workflow graph with automatic layout
 - Graph-to-timeline evidence navigation
 - Browser-only processing for imported session data
+- Optional server-only OpenAI Responses adapter with structured output
 
 ### Planned
 
 - Timeline search and event filters
 - Saved analysis profiles
 - Optional local Codex analysis
-- Optional API-provider adapter
+- Provider selection and model-assisted analysis UI
 - Exportable evidence-linked report
 - Focused parser and privacy tests
 
@@ -50,6 +51,7 @@ current scope.
 
 - Imported session files are read in the browser and are not uploaded.
 - The timeline and factual workflow work without an AI provider.
+- The OpenAI adapter is not connected to a route or the current interface.
 - Any future model-assisted analysis will be optional and will show what data
   is being sent before an external request.
 
@@ -61,6 +63,8 @@ current scope.
 | Tailwind CSS | Minimal visual design |
 | React Flow (`@xyflow/react`) | Interactive workflow graph |
 | Dagre (`@dagrejs/dagre`) | Automatic directed-graph layout |
+| Zod | Runtime validation for provider-generated graphs |
+| OpenAI SDK | Optional server-side Responses API adapter |
 
 ## Development
 
@@ -73,6 +77,21 @@ pnpm dev
 
 Open `http://localhost:3000`.
 
+## Optional OpenAI provider
+
+OpenAI support is implemented as a dormant server-only adapter. The current UI
+does not import it, expose an analysis endpoint, or make model requests.
+
+To prepare local configuration for a future opt-in analysis flow:
+
+```bash
+cp .env.example .env.local
+```
+
+Add an API key to `OPENAI_API_KEY`. The adapter defaults to
+`gpt-5.6-luna`; `DEVREPLAY_OPENAI_MODEL` can override it. `.env.local` is
+ignored by Git and must never be committed.
+
 Development is delivered through small, runnable milestones. AI-provider
-integration remains optional and will be added only after the local exploration
-workflow is useful on its own.
+execution remains optional and will be connected only after the local
+exploration workflow is useful on its own.
