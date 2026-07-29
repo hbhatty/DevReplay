@@ -28,16 +28,13 @@ Requirements:
 - Do not invent repository changes, test results, decisions, or outcomes.`;
 
 export interface OpenAIWorkflowAnalyzerOptions {
-  apiKey?: string;
   model?: string;
 }
 
 export class OpenAIWorkflowAnalyzer implements WorkflowAnalyzer {
-  private readonly apiKey?: string;
   private readonly model: string;
 
   constructor(options: OpenAIWorkflowAnalyzerOptions = {}) {
-    this.apiKey = options.apiKey;
     this.model =
       options.model ?? process.env.DEVREPLAY_OPENAI_MODEL ?? DEFAULT_MODEL;
   }
@@ -45,7 +42,7 @@ export class OpenAIWorkflowAnalyzer implements WorkflowAnalyzer {
   async analyze(
     input: WorkflowAnalysisInput,
   ): Promise<WorkflowAnalyzerResult> {
-    const apiKey = this.apiKey ?? process.env.OPENAI_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
       throw new Error(

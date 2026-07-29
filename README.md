@@ -54,6 +54,12 @@ current scope.
 - The OpenAI adapter is not connected to a route or the current interface.
 - Any future model-assisted analysis will be optional and will show what data
   is being sent before an external request.
+- Secret redaction is defense in depth, not a guarantee that arbitrary session
+  text contains no sensitive data. Users must review the request preview before
+  choosing external analysis.
+- OpenAI requests use `store: false`. This disables Responses application-state
+  storage, but it does not by itself eliminate OpenAI's default abuse-monitoring
+  retention.
 
 ## Technology
 
@@ -90,7 +96,15 @@ cp .env.example .env.local
 
 Add an API key to `OPENAI_API_KEY`. The adapter defaults to
 `gpt-5.6-luna`; `DEVREPLAY_OPENAI_MODEL` can override it. `.env.local` is
-ignored by Git and must never be committed.
+ignored by Git and must never be committed. The key is read only inside the
+server-only adapter when an analysis runs; it is not accepted as an adapter
+option or stored on the analyzer object.
+
+Do not expose this adapter through an unauthenticated public endpoint. Before a
+future endpoint is enabled, it must have explicit user confirmation, request
+size limits, authentication where applicable, rate limiting, and provider-side
+spend limits. Use a dedicated project key with the smallest practical access
+and budget rather than a personal all-purpose key.
 
 Development is delivered through small, runnable milestones. AI-provider
 execution remains optional and will be connected only after the local
