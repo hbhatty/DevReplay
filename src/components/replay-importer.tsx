@@ -9,6 +9,11 @@ import {
   type OmpImportIssue,
   type OmpReplay,
 } from "@/lib/replay/omp";
+import {
+  deleteStoredReplay,
+  loadStoredReplay,
+  saveStoredReplay,
+} from "@/lib/replay/storage";
 
 const MAX_REPLAY_FILE_SIZE = 5 * 1024 * 1024;
 
@@ -25,6 +30,13 @@ type ImportState =
       fileName: string;
       replay: OmpReplay;
     };
+
+type PersistenceState =
+  | { status: "loading" }
+  | { status: "empty" }
+  | { status: "saving" }
+  | { status: "saved"; savedAt: string }
+  | { status: "error"; message: string };
 
 function formatIssue(issue: OmpImportIssue) {
   return issue.lineNumber
@@ -48,11 +60,65 @@ function parseReplayText(fileName: string, text: string): ImportState {
 
 export function ReplayImporter() {
   const inputRef = useRef<HTMLInputElement>(null);
+  const userSelectedFileRef = useRef(false);
   const [importState, setImportState] = useState<ImportState>({ status: "idle" });
+  const [persistenceState, setPersistenceState] = useState<PersistenceState>({
+    status: "loading",
+  });
   const [activeView, setActiveView] = useState<"workflow" | "timeline">(
     "timeline",
   );
   const [highlightedEventId, setHighlightedEventId] = useState<string>();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function restoreSession() {
+      try {
+        const stored = await loadStoredReplay();
+
+        if (cancelled || userSelectedFileRef.current) {
+          return;
+        }
+
+        if (stored.status === "loaded") {
+          setImportState({
+            status: "success",
+            fileName: stored.data.fileName,
+            replay: stored.data.replay,
+          });
+          setPersistenceState({
+            status: "saved",
+            savedAt: stored.data.savedAt,
+          });
+          return;
+        }
+
+        if (stored.status === "discarded") {
+          setPersistenceState({
+            status: "error",
+            message: "An invalid saved session was removed.",
+          });
+          return;
+        }
+
+        setPersistenceState({ status: "empty" });
+      } catch {
+        if (!cancelled) {
+          setPersistenceState({
+            status: "error",
+            message: "Local session storage is unavailable in this browser.",
+          });
+        }
+      }
+    }
+
+    void restoreSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (activeView !== "timeline" || !highlightedEventId) {
@@ -84,6 +150,11 @@ export function ReplayImporter() {
       return;
     }
 
+    userSelectedFileRef.current = true;
+    setPersistenceState((current) =>
+      current.status === "loading" ? { status: "empty" } : current,
+    );
+
     if (!file.name.toLowerCase().endsWith(".jsonl")) {
       setImportState({
         status: "error",
@@ -112,6 +183,21 @@ export function ReplayImporter() {
       if (nextState.status === "success") {
         setActiveView("timeline");
         setHighlightedEventId(undefined);
+        setPersistenceState({ status: "saving" });
+
+        try {
+          const savedAt = await saveStoredReplay(
+            nextState.fileName,
+            nextState.replay,
+          );
+          setPersistenceState({ status: "saved", savedAt });
+        } catch {
+          setPersistenceState({
+            status: "error",
+            message:
+              "The session is open, but this browser could not save it locally.",
+          });
+        }
       }
     } catch {
       setImportState({
@@ -122,7 +208,24 @@ export function ReplayImporter() {
     }
   }
 
+  async function forgetSession() {
+    try {
+      await deleteStoredReplay();
+      setImportState({ status: "idle" });
+      setPersistenceState({ status: "empty" });
+      setActiveView("timeline");
+      setHighlightedEventId(undefined);
+    } catch {
+      setPersistenceState({
+        status: "error",
+        message: "The browser could not remove the saved session.",
+      });
+    }
+  }
+
   const isLoading = importState.status === "loading";
+  const isRestoring = persistenceState.status === "loading";
+  const isSaving = persistenceState.status === "saving";
 
   return (
     <section className="mt-5">
@@ -138,15 +241,27 @@ export function ReplayImporter() {
         <button
           type="button"
           onClick={openFilePicker}
-          disabled={isLoading}
+          disabled={isLoading || isRestoring || isSaving}
           className="rounded-md bg-neutral-900 px-3 py-2 text-xs font-medium text-white hover:bg-neutral-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 disabled:cursor-wait disabled:opacity-50"
         >
-          {isLoading ? "Reading session..." : "Import OMP session"}
+          {isRestoring
+            ? "Checking saved session..."
+            : isLoading
+              ? "Reading session..."
+              : isSaving
+                ? "Saving session..."
+                : "Import OMP session"}
         </button>
         <p className="w-full text-xs text-neutral-500 sm:ml-auto sm:w-auto">
           JSONL / 5 MB max / processed in this browser
         </p>
       </div>
+
+      {persistenceState.status === "error" ? (
+        <p className="mt-2 text-xs text-amber-700">
+          {persistenceState.message}
+        </p>
+      ) : null}
 
       {importState.status === "error" ? (
         <div
@@ -175,19 +290,38 @@ export function ReplayImporter() {
                 {importState.fileName}
               </p>
             </div>
-            <p className="flex items-center gap-1.5 text-xs text-neutral-600">
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  importState.replay.summary.status === "completed"
-                    ? "bg-emerald-600"
-                    : "bg-amber-500"
-                }`}
-                aria-hidden="true"
-              />
-              {importState.replay.summary.status === "completed"
-                ? "Completed"
-                : "Incomplete"}
-            </p>
+            <div className="flex flex-col items-end gap-2">
+              <p className="flex items-center gap-1.5 text-xs text-neutral-600">
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    importState.replay.summary.status === "completed"
+                      ? "bg-emerald-600"
+                      : "bg-amber-500"
+                  }`}
+                  aria-hidden="true"
+                />
+                {importState.replay.summary.status === "completed"
+                  ? "Completed"
+                  : "Incomplete"}
+              </p>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-neutral-500">
+                  {persistenceState.status === "saving"
+                    ? "Saving locally..."
+                    : persistenceState.status === "saved"
+                      ? "Saved locally"
+                      : "Not saved"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void forgetSession()}
+                  disabled={isSaving}
+                  className="text-neutral-500 underline decoration-neutral-300 underline-offset-2 hover:text-neutral-900 disabled:cursor-wait disabled:opacity-50"
+                >
+                  Forget session
+                </button>
+              </div>
+            </div>
           </div>
 
           <dl className="grid grid-cols-2 border-b border-neutral-200 bg-neutral-50 sm:grid-cols-4">
@@ -326,7 +460,9 @@ export function ReplayImporter() {
             message={
               isLoading
                 ? "Reading session..."
-                : "No session loaded. Import an OMP JSONL session."
+                : isRestoring
+                  ? "Checking for a saved session..."
+                  : "No session loaded. Import an OMP JSONL session."
             }
           />
         </section>

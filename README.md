@@ -33,6 +33,7 @@ analysis profiles through local Codex or a configured API provider.
 - Deterministic workflow graph with automatic layout
 - Graph-to-timeline evidence navigation
 - Browser-only processing for imported session data
+- Single-session persistence in browser IndexedDB with restore and deletion
 - Optional server-only OpenAI Responses adapter with structured output
 
 ### Planned
@@ -50,6 +51,13 @@ current scope.
 ## Privacy
 
 - Imported session files are read in the browser and are not uploaded.
+- The normalized timeline and summary for the latest successful import are
+  stored in this browser's IndexedDB so the session survives a refresh. Raw
+  JSONL records are not persisted, and **Forget session** removes the saved
+  copy.
+- Browser-local storage is not an encrypted secrets vault. Anyone with access
+  to the browser profile, or malicious code executing on the same origin,
+  could read locally saved session content.
 - The timeline and factual workflow work without an AI provider.
 - The OpenAI adapter is not connected to a route or the current interface.
 - Any future model-assisted analysis will be optional and will show what data
