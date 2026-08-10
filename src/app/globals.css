@@ -6,6 +6,11 @@
   --foreground: #1f1f1f;
 }
 
+.dark {
+  --background: #0a0a0a;
+  --foreground: #f5f5f5;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -25,4 +30,211 @@ body {
 button,
 input {
   font: inherit;
+}
+
+.dark .bg-\[\#f7f7f6\] {
+  background-color: #0a0a0a;
+}
+
+.dark .bg-white {
+  background-color: #171717;
+}
+
+.dark .bg-white\/75 {
+  background-color: rgb(23 23 23 / 0.75);
+}
+
+.dark .bg-white\/95 {
+  background-color: rgb(23 23 23 / 0.95);
+}
+
+.dark .bg-neutral-50 {
+  background-color: #111111;
+}
+
+.dark .bg-neutral-100 {
+  background-color: #262626;
+}
+
+.dark .bg-neutral-900,
+.dark .bg-neutral-950 {
+  background-color: #fafafa;
+}
+
+.dark .bg-red-50 {
+  background-color: #450a0a;
+}
+
+.dark .bg-amber-50 {
+  background-color: #451a03;
+}
+
+.dark .bg-emerald-50 {
+  background-color: #022c22;
+}
+
+.dark .bg-blue-50 {
+  background-color: #172554;
+}
+
+.dark .bg-indigo-50\/70 {
+  background-color: rgb(30 27 75 / 0.7);
+}
+
+.dark .bg-violet-50 {
+  background-color: #2e1065;
+}
+
+.dark .text-white {
+  color: #171717;
+}
+
+.dark .text-neutral-950,
+.dark .text-neutral-900,
+.dark .text-neutral-800 {
+  color: #f5f5f5;
+}
+
+.dark .text-neutral-700 {
+  color: #e5e5e5;
+}
+
+.dark .text-neutral-600 {
+  color: #d4d4d4;
+}
+
+.dark .text-neutral-500 {
+  color: #a3a3a3;
+}
+
+.dark .text-neutral-400 {
+  color: #737373;
+}
+
+.dark .text-red-900,
+.dark .text-red-800,
+.dark .text-red-700 {
+  color: #fca5a5;
+}
+
+.dark .text-amber-800,
+.dark .text-amber-700 {
+  color: #fcd34d;
+}
+
+.dark .text-emerald-700 {
+  color: #6ee7b7;
+}
+
+.dark .text-blue-700 {
+  color: #93c5fd;
+}
+
+.dark .text-indigo-700 {
+  color: #a5b4fc;
+}
+
+.dark .text-violet-700 {
+  color: #c4b5fd;
+}
+
+.dark .border-neutral-200,
+.dark .border-neutral-300 {
+  border-color: #404040;
+}
+
+.dark .border-red-200 {
+  border-color: #7f1d1d;
+}
+
+.dark .border-indigo-200 {
+  border-color: #3730a3;
+}
+
+.dark .border-l-neutral-900 {
+  border-left-color: #fafafa;
+}
+
+.dark .ring-neutral-300 {
+  --tw-ring-color: #525252;
+}
+
+.dark .ring-neutral-900\/10 {
+  --tw-ring-color: rgb(245 245 245 / 0.12);
+}
+
+.dark .ring-red-200 {
+  --tw-ring-color: #7f1d1d;
+}
+
+.dark .ring-amber-200 {
+  --tw-ring-color: #92400e;
+}
+
+.dark .ring-emerald-200 {
+  --tw-ring-color: #065f46;
+}
+
+.dark .ring-blue-200 {
+  --tw-ring-color: #1d4ed8;
+}
+
+.dark .ring-violet-200 {
+  --tw-ring-color: #6d28d9;
+}
+
+.dark .decoration-neutral-300 {
+  text-decoration-color: #525252;
+}
+
+.dark .hover\:bg-neutral-50:hover {
+  background-color: #262626;
+}
+
+.dark .hover\:bg-neutral-700:hover {
+  background-color: #e5e5e5;
+}
+
+.dark .hover\:text-neutral-900:hover {
+  color: #f5f5f5;
+}
+
+.dark .focus-visible\:outline-neutral-900:focus-visible {
+  outline-color: #f5f5f5;
+}
+
+.dark .focus\:border-neutral-900:focus {
+  border-color: #f5f5f5;
+}
+
+.dark .react-flow__background {
+  background-color: #111111;
+}
+
+.dark .react-flow__background path,
+.dark .react-flow__background line {
+  stroke: #404040;
+}
+
+.dark .react-flow__background circle {
+  fill: #404040;
+}
+
+.dark .react-flow__controls {
+  border-color: #404040;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+}
+
+.dark .react-flow__controls-button {
+  background-color: #171717;
+  border-color: #404040;
+  color: #e5e5e5;
+}
+
+.dark .react-flow__controls-button:hover {
+  background-color: #262626;
+}
+
+.dark .react-flow__edge-path {
+  stroke: #a3a3a3;
 }
