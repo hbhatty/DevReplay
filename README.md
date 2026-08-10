@@ -1,13 +1,15 @@
 # DevReplay
 
-DevReplay is a local-first developer tool for exploring AI-assisted coding
-sessions as readable timelines and evidence-linked workflow graphs.
+AI coding sessions get long quickly. DevReplay turns an OMP session into a
+timeline you can scan and a workflow you can trace back to the original events.
+The default experience runs locally in your browser.
 
-Instead of rereading a long transcript, a developer can trace the prompts,
-responses, tool activity, errors, and completion state. Every workflow node
-links back to the session events that produced it.
+![DevReplay timeline showing an imported OMP coding session](docs/devreplay-timeline.png)
 
-## Current workflow
+_This screenshot comes from an OMP session used to improve DevReplay's own
+timeline._
+
+## How it works
 
 1. Import an OMP `.jsonl` session from the browser.
 2. DevReplay parses and validates the file locally.
@@ -18,9 +20,7 @@ links back to the session events that produced it.
 
 The factual workflow is deterministic and makes no model or network request.
 
-## Capabilities
-
-### Included
+## What's included
 
 - OMP JSONL import and validation
 - Session metadata and record summaries
