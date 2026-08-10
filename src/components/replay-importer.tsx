@@ -16,6 +16,10 @@ import {
 } from "@/lib/replay/storage";
 
 const MAX_REPLAY_FILE_SIZE = 5 * 1024 * 1024;
+const ACTIVE_VIEW_STORAGE_KEY = "devreplay-active-view";
+
+type ActiveView = "workflow" | "timeline";
+
 
 type ImportState =
   | { status: "idle" }
@@ -37,6 +41,32 @@ type PersistenceState =
   | { status: "saving" }
   | { status: "saved"; savedAt: string }
   | { status: "error"; message: string };
+
+function readStoredActiveView(): ActiveView | undefined {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  try {
+    const value = window.localStorage.getItem(ACTIVE_VIEW_STORAGE_KEY);
+
+    return value === "workflow" || value === "timeline" ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function saveActiveViewPreference(activeView: ActiveView) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(ACTIVE_VIEW_STORAGE_KEY, activeView);
+  } catch {
+    // The active tab is a convenience preference; session viewing still works.
+  }
+}
 
 function formatIssue(issue: OmpImportIssue) {
   return issue.lineNumber
@@ -65,8 +95,8 @@ export function ReplayImporter() {
   const [persistenceState, setPersistenceState] = useState<PersistenceState>({
     status: "loading",
   });
-  const [activeView, setActiveView] = useState<"workflow" | "timeline">(
-    "timeline",
+  const [activeView, setActiveView] = useState<ActiveView>(
+    () => readStoredActiveView() ?? "timeline",
   );
   const [highlightedEventId, setHighlightedEventId] = useState<string>();
 
@@ -91,6 +121,7 @@ export function ReplayImporter() {
             status: "saved",
             savedAt: stored.data.savedAt,
           });
+          setActiveView(readStoredActiveView() ?? "workflow");
           return;
         }
 
@@ -119,6 +150,14 @@ export function ReplayImporter() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (importState.status !== "success") {
+      return;
+    }
+
+    saveActiveViewPreference(activeView);
+  }, [activeView, importState.status]);
 
   useEffect(() => {
     if (activeView !== "timeline" || !highlightedEventId) {
